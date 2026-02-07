@@ -9,12 +9,12 @@ const BASE_SCORES = {
 
 const KEYWORD_RULES = [
   {
-    words: ["harass", "bully", "abuse", "threaten", "blackmail"],
+    words: ["harass", "bully", "abuse", "threaten", "blackmail","molest"],
     score: 40,
     reason: "Harassment or abuse related terms"
   },
   {
-    words: ["hit", "violence", "physical", "attack"],
+    words: ["hit", "violence", "physical", "attack","ragging"],
     score: 40,
     reason: "Physical violence related terms"
   },
@@ -35,7 +35,7 @@ const KEYWORD_RULES = [
   },
   {
     words: ["dirty", "unclean", "smell", "stink", "toilet", "washroom"],
-    score: 5,
+    score: 10,
     reason: "Unhygienic facilities"
   },
   {
