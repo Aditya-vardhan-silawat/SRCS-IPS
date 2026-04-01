@@ -47,6 +47,22 @@ const reportSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    reportCode: {
+      type: String,
+      unique: true,
+      index: true,
+      required: true
+    },
+    parentReportCode: {
+      type: String,
+      default: null,
+      index: true
+    },
+    status: {
+      type: String,
+      enum: ["PENDING", "IN_PROGRESS", "RESOLVED"],
+      default: "PENDING"
+    },
     duplicateOf: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Report",

@@ -1,38 +1,49 @@
 import { API_BASE_URL } from "../config/apiConfig";
 
-export async function submitReport({ category, description, images }) {
+async function fetchWithRetry(url, options = {}, retries = 3, backoff = 1000) {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw { status: res.status, message: errorData.error || "Request failed" };
+    }
+    return await res.json();
+  } catch (err) {
+    if (retries > 0 && (err.status === 503 || err.status === 504 || !err.status)) {
+      await new Promise(resolve => setTimeout(resolve, backoff));
+      return fetchWithRetry(url, options, retries - 1, backoff * 2);
+    }
+    throw err;
+  }
+}
+
+export async function submitReport({ category, description, images, parentReportCode }) {
   const formData = new FormData();
   formData.append("category", category);
   formData.append("description", description);
+  if (parentReportCode) {
+    formData.append("parentReportCode", parentReportCode);
+  }
   images.forEach((file) => formData.append("images", file));
 
-  const res = await fetch(`${API_BASE_URL}/reports`, {
+  return fetchWithRetry(`${API_BASE_URL}/reports`, {
     method: "POST",
     body: formData
   });
+}
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to submit report");
-  }
-  return data;
+export async function trackReport(reportCode) {
+  return fetchWithRetry(`${API_BASE_URL}/reports/track/${reportCode}`);
 }
 
 export async function fetchReports(sort = "date") {
-  const res = await fetch(`${API_BASE_URL}/reports?sort=${sort}`);
-  if (!res.ok) throw new Error("Failed to load reports");
-  return res.json();
+  return fetchWithRetry(`${API_BASE_URL}/reports?sort=${sort}`);
 }
 
 export async function upvoteReport(id) {
-  const res = await fetch(`${API_BASE_URL}/reports/${id}/upvote`, {
+  return fetchWithRetry(`${API_BASE_URL}/reports/${id}/upvote`, {
     method: "POST"
   });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to upvote");
-  }
-  return data;
 }
 
 export async function fetchAdminReports(sort = "severity") {
@@ -42,10 +53,19 @@ export async function fetchAdminReports(sort = "severity") {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}/admin/reports?sort=${sort}`, {
+  return fetchWithRetry(`${API_BASE_URL}/admin/reports?sort=${sort}`, {
     headers
   });
-  
-  if (!res.ok) throw new Error("Failed to load admin reports or unauthorized");
-  return res.json();
+}
+
+export async function updateReportStatus(id, status) {
+  const token = localStorage.getItem("admin_token");
+  return fetchWithRetry(`${API_BASE_URL}/admin/reports/${id}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ status })
+  });
 }

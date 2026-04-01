@@ -3,10 +3,12 @@ import Layout from "./components/Layout";
 import ReportPage from "./pages/ReportPage";
 import PublicFeedPage from "./pages/PublicFeedPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import TrackStatusPage from "./pages/TrackStatusPage";
+import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 
 export default function App() {
-  const [view, setView] = useState("report");
+  const [view, setView] = useState("home");
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function App() {
   function handleLogout() {
     localStorage.removeItem("admin_token");
     setIsAdmin(false);
-    setView("report");
+    setView("home");
   }
 
   return (
@@ -33,44 +35,72 @@ export default function App() {
       isLoggedIn={isAdmin}
       onLogout={handleLogout}
     >
-      <nav className="flex justify-center space-x-4 mb-8">
+      <nav className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-10 p-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <button
+          onClick={() => setView("home")}
+          className={`px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+            view === "home"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+              : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          }`}
+        >
+          Home
+        </button>
         <button
           onClick={() => setView("report")}
-          className={`px-4 py-2 rounded-md font-medium transition-colors ${
+          className={`px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 ${
             view === "report"
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+              : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
           }`}
         >
           Submit Report
         </button>
         <button
           onClick={() => setView("feed")}
-          className={`px-4 py-2 rounded-md font-medium transition-colors ${
+          className={`px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 ${
             view === "feed"
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+              : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
           }`}
         >
-          Public Issues
+          Public Feed
+        </button>
+        <button
+          onClick={() => setView("track")}
+          className={`px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+            view === "track"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+              : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          }`}
+        >
+          Track Status
         </button>
         {isAdmin && (
           <button
             onClick={() => setView("admin")}
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+            className={`px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 ${
               view === "admin"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             }`}
           >
-            Admin Dashboard
+            Dashboard
           </button>
         )}
       </nav>
 
-      <div className="w-full max-w-4xl mx-auto">
+      <div className="w-full">
+        {view === "home" && (
+          <LandingPage 
+            onStartReporting={() => setView("report")}
+            onTrackStatus={() => setView("track")}
+            onViewFeed={() => setView("feed")}
+          />
+        )}
         {view === "report" && <ReportPage />}
         {view === "feed" && <PublicFeedPage />}
+        {view === "track" && <TrackStatusPage />}
         {view === "login" && <LoginPage onLoginSuccess={handleLoginSuccess} />}
         {view === "admin" && (
           isAdmin ? <AdminDashboardPage /> : <LoginPage onLoginSuccess={handleLoginSuccess} />

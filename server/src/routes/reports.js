@@ -8,13 +8,26 @@ import { reportRateLimiter } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
+async function generateUniqueReportCode() {
+  const digits = 7; // Fixed at 7 digits (range 6-8 as per requirements)
+  let code;
+  let exists = true;
+  
+  while (exists) {
+    code = Math.floor(Math.random() * (Math.pow(10, digits) - Math.pow(10, digits-1)) + Math.pow(10, digits-1)).toString();
+    const existing = await Report.findOne({ reportCode: code });
+    if (!existing) exists = false;
+  }
+  return code;
+}
+
 router.post(
   "/",
   reportRateLimiter,
   upload.array("images", 3),
   async (req, res, next) => {
     try {
-      const { category, description } = req.body;
+      const { category, description, parentReportCode } = req.body;
 
       if (!category || !description) {
         return res.status(400).json({ error: "Category and description are required" });
@@ -22,6 +35,14 @@ router.post(
 
       if (isAbusiveOrGarbage(description)) {
         return res.status(400).json({ error: "Description appears invalid or abusive" });
+      }
+
+      // Validate parentReportCode if provided
+      if (parentReportCode) {
+        const parentReport = await Report.findOne({ reportCode: parentReportCode });
+        if (!parentReport) {
+          return res.status(400).json({ error: "The provided parent report code does not exist" });
+        }
       }
 
       const duplicate = await findPossibleDuplicate(category, description);
@@ -34,6 +55,7 @@ router.post(
 
       const severityResult = evaluateSeverity(category, description);
       const images = await saveImages(req.files);
+      const reportCode = await generateUniqueReportCode();
 
       const report = await Report.create({
         category,
@@ -42,11 +64,14 @@ router.post(
         severity: severityResult.severity,
         severityScore: severityResult.score,
         severityReasons: severityResult.reasons,
+        reportCode,
+        parentReportCode: parentReportCode || null,
         upvotes: 0
       });
 
       res.status(201).json({
         id: report._id,
+        reportCode: report.reportCode,
         severity: report.severity,
         severityScore: report.severityScore,
         severityReasons: report.severityReasons
@@ -56,6 +81,36 @@ router.post(
     }
   }
 );
+
+router.get("/track/:reportCode", async (req, res, next) => {
+  try {
+    const { reportCode } = req.params;
+    const report = await Report.findOne({ reportCode });
+    
+    if (!report) {
+      return res.status(404).json({ error: "Report not found" });
+    }
+
+    // Find all follow-up reports linked to this code
+    const followUps = await Report.find({ parentReportCode: reportCode })
+      .select("category description severity createdAt status")
+      .sort({ createdAt: 1 });
+
+    res.json({
+      report: {
+        category: report.category,
+        description: report.description,
+        severity: report.severity,
+        status: report.status,
+        createdAt: report.createdAt,
+        reportCode: report.reportCode
+      },
+      followUps
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get("/", async (req, res, next) => {
   try {

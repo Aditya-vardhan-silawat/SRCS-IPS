@@ -18,10 +18,31 @@ router.get("/reports", async (req, res, next) => {
     const reports = await Report.find()
       .sort(sortOption)
       .select(
-        "category description images severity severityScore severityReasons upvotes createdAt isFlaggedSpam duplicateOf"
+        "category description images severity severityScore severityReasons upvotes createdAt isFlaggedSpam duplicateOf reportCode parentReportCode status"
       );
 
     res.json(reports);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/reports/:id/status", async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!["PENDING", "IN_PROGRESS", "RESOLVED"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const report = await Report.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!report) return res.status(404).json({ error: "Report not found" });
+
+    res.json(report);
   } catch (err) {
     next(err);
   }
